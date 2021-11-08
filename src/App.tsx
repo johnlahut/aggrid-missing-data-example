@@ -29,7 +29,7 @@ function App() {
         <AgGridReact
           gridOptions={gridOptions}
           rowData={badChartData.data}>
-            {columns.map(col => <AgGridColumn field={col.name} key={col.name}></AgGridColumn>)}
+            {columns.map(col => <AgGridColumn field={col.name} key={col.name} chartDataType="series"></AgGridColumn>)}
         </AgGridReact>
       </div>
 
