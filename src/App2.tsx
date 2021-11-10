@@ -7,54 +7,72 @@ import chartData from "./data/sample-chart-data.json"
 
 import { AgGridColumn, AgGridReact } from 'ag-grid-react';
 import { LicenseManager } from 'ag-grid-enterprise';
-import { ChartCreated, ChartRef, ColumnApi, GridApi, GridOptions, GridReadyEvent } from 'ag-grid-community';
+import { ChartCreated, ChartModel, ChartRef, ColumnApi, GridApi, GridOptions, GridReadyEvent } from 'ag-grid-community';
 
 function App2() {
 
   const [api, setApi] = useState<GridApi>()
   const [columnApi, setColumnApi] = useState<ColumnApi>();
 
-  const [charts, setCharts] = useState<HTMLElement[]>([])
   const [selectedChart, setSelectedChart] = useState<number>();
   const [isFocusedView, setFocusedView] = useState<boolean>(false);
+  const [chartModels, setChartModels] = useState<ChartModel[]>([]);
+  // const [totalPlots, setTotalPlots] = useState<number>();
 
-  const chartRef = useRef(charts);
-  const selectedRef = useRef(selectedChart);
+  const chartModelsRef = useRef(chartModels);
 
-  // update refs as base objects are changed
   useEffect(() => {
-    chartRef.current = charts
-    selectedRef.current = selectedChart
-  }, [charts])
+    chartModelsRef.current = chartModels
+  }, [chartModels])
 
   // when selected plot changes, re-render the HTML element with the correct plot
   useEffect(() => {
+    console.log(selectedChart)
     const plotPanel = document.querySelector('#plot-panel');
     
-    if (selectedChart !== undefined && plotPanel) {
-      plotPanel.innerHTML = ''
-      plotPanel.appendChild(charts[selectedChart])
+    
+    if (selectedChart !== undefined && selectedChart >= 0 && plotPanel) {
+      const chartRef = api?.getChartRef(chartModels[selectedChart].chartId)?.chartElement
+      if (chartRef) {
+        plotPanel.innerHTML = ''
+        plotPanel.appendChild(chartRef)
+
+        // focus 
+        setTimeout(() => chartRef.dispatchEvent(new Event('focusin')), 1)
+      }
+
     }
   }, [selectedChart])
 
-  const columns = ['item1', 'item2', 'item3', 'item4', 'item5']
+  useEffect(() => {
+    if (chartModels.length > 0) {
+      setSelectedChart(chartModels.length - 1)
+    }
+  }, [chartModels])
+
   const gridOptions: GridOptions = {
     enableCharts: true,
     enableRangeSelection: true,
     suppressContextMenu: false,
     defaultColDef: {
-      suppressMenu: false,
+      // suppressMenu: false,
       filter: 'agTextColumnFilter'
     },
-    createChartContainer: createChartContainer,
+    // popupParent: document.body,
+    // createChartContainer: createChartContainer,
+    // getChartToolbarItems: () => ['chartDownload', 'chartData', 'chartSettings'],
 
     // when charts are created, set the most recently created chart as the selected chart
     // append the HTML element to our list of created charts
-    onChartCreated: (event: ChartCreated) => {
-      const chart = event.api.getChartRef(event.chartId)
-      setCharts([...chartRef.current, chart?.chartElement.closest(`#${event.chartId}`)!])
-      setSelectedChart(chartRef.current.length)
-    },
+    // onChartCreated: (event: ChartCreated) => {
+    //   // chart model that was just created
+    //   const model = event.api.getChartModels()?.find(chart => chart.chartId === event.chartId)
+    //   if (model) {
+
+    //     // dispatch our new model list
+    //     setChartModels([...chartModelsRef.current, model]);
+    //   }
+    // },
     onGridReady: (event: GridReadyEvent) => {
       setApi(event.api)
       setColumnApi(event.columnApi)
@@ -68,7 +86,7 @@ function App2() {
   }
 
   const nextPlot = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-    if (selectedChart !== undefined && selectedChart < charts.length - 1) {
+    if (selectedChart !== undefined && selectedChart < chartModels.length - 1) {
       setSelectedChart(selectedChart + 1)
     }
   }
@@ -89,13 +107,18 @@ function App2() {
   }
 
   return (
-
     <div>
       <div className="ag-theme-alpine" style={{height: 800, width: 1200}}>
         <AgGridReact
           gridOptions={gridOptions}
           rowData={chartData}>
-            {columns.map(col => <AgGridColumn field={col} key={col}></AgGridColumn>)}
+            <AgGridColumn field="time" chartDataType='time' valueGetter={(params) => new Date(params.data.time)}/>
+            <AgGridColumn field="item1" chartDataType='series'/>
+            <AgGridColumn field="item2" chartDataType='series'/>
+            <AgGridColumn field="item3" chartDataType='series'/>
+            <AgGridColumn field="item4" chartDataType='series'/>
+            <AgGridColumn field="item5" chartDataType='series'/>
+            {/* {columns.map(col => <AgGridColumn field={col} key={col}></AgGridColumn>)} */}
         </AgGridReact>
       </div>
 
@@ -104,7 +127,7 @@ function App2() {
           <button onClick={prevPlot}>Prev</button>
           <button onClick={nextPlot}>Next</button>
           <button onClick={focusedView}>Show Only Plotted Cols</button>
-          {/* <button>Next</button> */}
+          <span>{`total plots: ${chartModels.length}`}</span>
         </div>
         <div id='plot-panel'>
           
